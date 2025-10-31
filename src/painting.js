@@ -1,4 +1,5 @@
 let penColors = ["white", "red", "orange", "yellow", "green", "blue", "purple", "black"]
+let win = false;
 
 function preload() {
   bg = loadImage('/assets/EcceHomoFlaking.jpg');
@@ -12,10 +13,17 @@ function setup() {
   
   createCanvas(480, 480);
   image(bg,10,0,480,480);
+  fill("white")
+  stroke("black")
+  textSize(32);
+  text("Repair the Painting!", 100, 55);
 }
 
 function draw() {
-  drawPalette();
+  if (!win) {
+    drawPalette();
+  }
+  // Else, show end + score
 }
 
 function mouseDragged() {
