@@ -61,17 +61,14 @@ function endScreenMousePressed() {
   const hit = r => mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h;
 
   if (hit(ui.nextBtn)) {
-    // Placeholder: 在这里触发 Jason 的“different pictures”加载逻辑
-    // 现在先仅关闭结束界面；也可以显示一个“Loading...”文字（留空位）
     END.visible = false;
     return true; // consume
   }
   if (hit(ui.replayBtn)) {
     END.visible = false;
-    // 简单复位到初始图像（不影响 Jason 评分逻辑）
     clear();
     image(bg, 10, 0, 480, 480);
     return true;
   }
-  return true; // 点击其它处也吞掉，防止点到画布
+  return true;
 }
