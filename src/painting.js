@@ -147,56 +147,91 @@ function draw() {
   }
 }
 
-function __smudgeDirectional(cx, cy, radius, baseStrength = 0.6) {
+// Blur function
+function __smudgeDirectional(cx, cy, radius, baseStrength = 0.65) {
   let vx = mouseX - pmouseX, vy = mouseY - pmouseY;
-  const vlen = Math.sqrt(vx*vx + vy*vy) || 1;
-  vx /= vlen; vy /= vlen;
+  const vlen = Math.sqrt(vx*vx + vy*vy) || 1; vx /= vlen; vy /= vlen;
 
-  const pull = Math.max(3, Math.floor(radius * (0.6 + Math.min(vlen, 12) / 24))); // 0.6r ~ 1.1r
+  const pull = Math.max(4, Math.floor(radius * (1.3 + Math.min(vlen, 12) / 14)));
 
-  const x0 = Math.round(cx - radius);
-  const y0 = Math.round(cy - radius);
-  const w  = radius * 2;
-  const h  = radius * 2;
-
+  const x0 = Math.round(cx - radius), y0 = Math.round(cy - radius);
+  const w = radius * 2, h = radius * 2;
   const src = get(x0, y0, w, h);
   const out = createImage(w, h);
-  src.loadPixels();
-  out.loadPixels();
-
+  src.loadPixels(); out.loadPixels();
   const idx = (x, y) => 4 * (y * w + x);
-  const tau = pull * 0.6;
+  const tau = pull * 0.55;
+
+  const orthoMax = Math.max(1, Math.floor(Math.min(2, radius * 0.16)));
+  const orthoOffsets = [0, 1, -1, 2, -2].filter(o => Math.abs(o) <= orthoMax);
+
+  let cR=0,cG=0,cB=0,cN=0;
+  const core = Math.max(2, Math.floor(radius * 0.35));
+  for (let yy = -core; yy <= core; yy++) {
+    for (let xx = -core; xx <= core; xx++) {
+      if (xx*xx + yy*yy > core*core) continue;
+      const i = idx(xx + radius, yy + radius);
+      cR += src.pixels[i]; cG += src.pixels[i+1]; cB += src.pixels[i+2]; cN++;
+    }
+  }
+  cR /= cN || 1; cG /= cN || 1; cB /= cN || 1;
 
   for (let yy = 0; yy < h; yy++) {
     for (let xx = 0; xx < w; xx++) {
       const dx = xx - radius, dy = yy - radius;
+      const dist2 = dx*dx + dy*dy;
       const di = idx(xx, yy);
 
-      if (dx*dx + dy*dy > radius*radius) {
+      if (dist2 > radius*radius) {
         out.pixels[di]     = src.pixels[di];
         out.pixels[di + 1] = src.pixels[di + 1];
         out.pixels[di + 2] = src.pixels[di + 2];
         out.pixels[di + 3] = src.pixels[di + 3];
         continue;
       }
-      let rSum=0,gSum=0,bSum=0, wSum=0;
+
+      let rSum=0,gSum=0,bSum=0,wSum=0;
       for (let s = 0; s <= pull; s++) {
-        const sx = Math.round(xx - vx * s);
-        const sy = Math.round(yy - vy * s);
-        if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
-        const si = idx(sx, sy);
-        const wgt = Math.exp(-s / Math.max(1, tau));
-        rSum += src.pixels[si]     * wgt;
-        gSum += src.pixels[si + 1] * wgt;
-        bSum += src.pixels[si + 2] * wgt;
-        wSum += wgt;
+        const wDir = Math.exp(-s / Math.max(1, tau));
+        for (let o of orthoOffsets) {
+          const ox = -vy * o, oy = vx * o;
+          const sx = Math.round(xx - vx*s + ox);
+          const sy = Math.round(yy - vy*s + oy);
+          if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+          const si = idx(sx, sy);
+          const wOrtho = (orthoMax === 0) ? 1 : (1 - Math.min(1, Math.abs(o)/(orthoMax+0.5)));
+          const wgt = wDir * wOrtho;
+          rSum += src.pixels[si]     * wgt;
+          gSum += src.pixels[si + 1] * wgt;
+          bSum += src.pixels[si + 2] * wgt;
+          wSum += wgt;
+        }
       }
-      const rSm = rSum / wSum, gSm = gSum / wSum, bSm = bSum / wSum;
-      const r0 = src.pixels[di], g0 = src.pixels[di + 1], b0 = src.pixels[di + 2];
-      const k = baseStrength * Math.min(1, 0.35 + vlen / 12);
-      out.pixels[di]     = r0 + (rSm - r0) * k;
-      out.pixels[di + 1] = g0 + (gSm - g0) * k;
-      out.pixels[di + 2] = b0 + (bSm - b0) * k;
+      const rSm = rSum / Math.max(1e-6, wSum);
+      const gSm = gSum / Math.max(1e-6, wSum);
+      const bSm = bSum / Math.max(1e-6, wSum);
+
+      const r0 = src.pixels[di], g0 = src.pixels[di+1], b0 = src.pixels[di+2];
+      const dist = Math.sqrt(dist2);
+      const t = 1 - dist / radius;
+      const squeeze = t * t;
+      const rCore = r0 + (cR - r0) * (0.55 * squeeze);
+      const gCore = g0 + (cG - g0) * (0.55 * squeeze);
+      const bCore = b0 + (cB - b0) * (0.55 * squeeze);
+
+      const sizeBoost  = 0.12 * Math.min(1, radius/28);
+      const speedBoost = Math.min(0.4, vlen/14);
+      const gap = Math.min(1, Math.sqrt((rSm-r0)**2 + (gSm-g0)**2 + (bSm-b0)**2) / 200);
+      const k = Math.min(1, baseStrength * (0.9 + speedBoost) + sizeBoost + 0.2*gap);
+
+      const mixSmudge = 0.6 + 0.4 * squeeze;
+      const rBlend = rSm * (1 - mixSmudge) + rCore * mixSmudge;
+      const gBlend = gSm * (1 - mixSmudge) + gCore * mixSmudge;
+      const bBlend = bSm * (1 - mixSmudge) + bCore * mixSmudge;
+
+      out.pixels[di]     = r0 + (rBlend - r0) * k;
+      out.pixels[di + 1] = g0 + (gBlend - g0) * k;
+      out.pixels[di + 2] = b0 + (bBlend - b0) * k;
       out.pixels[di + 3] = 255;
     }
   }
