@@ -1,5 +1,6 @@
 let penColors = ["white", "red", "orange", "yellow", "green", "blue", "purple", "black"]
 let win = false;
+let __scorePlaceholder = 0;
 
 function preload() {
   bg = loadImage('assets/EcceHomoFlaking.jpg');
@@ -11,7 +12,9 @@ function setup() {
   // Pen variables
   penSize = 30; // 5; <=50; +=5
   penColor = "red";
-  
+
+  pixelDensity(1);
+
   createCanvas(480, 480);
   image(bg,10,0,480,480);
   fill("white")
@@ -27,7 +30,6 @@ function draw() {
     text("Repair the Painting", 120, 120);
   }
 }
-
 function mouseDragged() {
   //if !overPalette
   noStroke();
@@ -156,67 +158,83 @@ function draw() {
     rect(endBtn.x - 2, endBtn.y - 2, endBtn.w + 4, endBtn.h + 4);
     strokeWeight(1);
   }
+
+  if (typeof drawEndScreen === "function") {
+    drawEndScreen();
+  }
 }
 
-function __smudgeDirectional(cx, cy, radius, baseStrength = 0.6) {
+function __smudgeDirectional(cx, cy, radius, baseStrength = 0.75) {
   let vx = mouseX - pmouseX, vy = mouseY - pmouseY;
-  const vlen = Math.sqrt(vx*vx + vy*vy) || 1;
-  vx /= vlen; vy /= vlen;
+  const vlen = Math.sqrt(vx*vx + vy*vy) || 1;  vx /= vlen;  vy /= vlen;
 
-  const pull = Math.max(3, Math.floor(radius * (0.6 + Math.min(vlen, 12) / 24))); // 0.6r ~ 1.1r
+  const pull = Math.max(3, Math.floor(radius * (0.8 + Math.min(vlen, 10) / 20)));
 
-  const x0 = Math.round(cx - radius);
-  const y0 = Math.round(cy - radius);
-  const w  = radius * 2;
-  const h  = radius * 2;
+  loadPixels();
+  const W = width, H = height;
+  const idx = (x, y) => 4 * (y * W + x);
 
-  const src = get(x0, y0, w, h);
-  const out = createImage(w, h);
-  src.loadPixels();
-  out.loadPixels();
+  const x0 = Math.max(0, Math.round(cx - radius));
+  const y0 = Math.max(0, Math.round(cy - radius));
+  const x1 = Math.min(W - 1, Math.round(cx + radius));
+  const y1 = Math.min(H - 1, Math.round(cy + radius));
 
-  const idx = (x, y) => 4 * (y * w + x);
-  const tau = pull * 0.6;
+  const sigmaS = Math.max(1, pull * 0.55);
+  const sigmaR = 32;
+  const inv2sS2 = 1 / (2 * sigmaS * sigmaS);
+  const inv2sR2 = 1 / (2 * sigmaR * sigmaR);
 
-  for (let yy = 0; yy < h; yy++) {
-    for (let xx = 0; xx < w; xx++) {
-      const dx = xx - radius, dy = yy - radius;
-      const di = idx(xx, yy);
+  const rw = x1 - x0 + 1, rh = y1 - y0 + 1;
+  const buf = new Uint8ClampedArray(rw * rh * 4);
+  for (let yy = 0; yy < rh; yy++) {
+    const si = 4 * ((y0 + yy) * W + x0);
+    buf.set(pixels.subarray(si, si + rw * 4), yy * rw * 4);
+  }
+  const bidx = (x, y) => 4 * (y * rw + x);
 
-      if (dx*dx + dy*dy > radius*radius) {
-        out.pixels[di]     = src.pixels[di];
-        out.pixels[di + 1] = src.pixels[di + 1];
-        out.pixels[di + 2] = src.pixels[di + 2];
-        out.pixels[di + 3] = src.pixels[di + 3];
-        continue;
-      }
-      let rSum=0,gSum=0,bSum=0, wSum=0;
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      const dx = x - cx, dy = y - cy;
+      if (dx*dx + dy*dy > radius*radius) continue;
+
+      const bi = bidx(x - x0, y - y0);
+      const r0 = buf[bi], g0 = buf[bi + 1], b0 = buf[bi + 2];
+
+      let rSum=0, gSum=0, bSum=0, wSum=0;
       for (let s = 0; s <= pull; s++) {
-        const sx = Math.round(xx - vx * s);
-        const sy = Math.round(yy - vy * s);
-        if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
-        const si = idx(sx, sy);
-        const wgt = Math.exp(-s / Math.max(1, tau));
-        rSum += src.pixels[si]     * wgt;
-        gSum += src.pixels[si + 1] * wgt;
-        bSum += src.pixels[si + 2] * wgt;
-        wSum += wgt;
+        const sx = Math.round(x - vx * s);
+        const sy = Math.round(y - vy * s);
+        if (sx < x0 || sy < y0 || sx > x1 || sy > y1) continue;
+
+        const sbi = bidx(sx - x0, sy - y0);
+        const rs = buf[sbi], gs = buf[sbi + 1], bs = buf[sbi + 2];
+
+        const wS = Math.exp(-(s*s) * (1 / (2 * sigmaS * sigmaS)));
+        const dR = rs - r0, dG = gs - g0, dB = bs - b0;
+        const wR = Math.exp(-(dR*dR + dG*dG + dB*dB) * (1 / (2 * sigmaR * sigmaR)));
+
+        const wgt = wS * wR;
+        rSum += rs * wgt; gSum += gs * wgt; bSum += bs * wgt; wSum += wgt;
       }
-      const rSm = rSum / wSum, gSm = gSum / wSum, bSm = bSum / wSum;
-      const r0 = src.pixels[di], g0 = src.pixels[di + 1], b0 = src.pixels[di + 2];
-      const k = baseStrength * Math.min(1, 0.35 + vlen / 12);
-      out.pixels[di]     = r0 + (rSm - r0) * k;
-      out.pixels[di + 1] = g0 + (gSm - g0) * k;
-      out.pixels[di + 2] = b0 + (bSm - b0) * k;
-      out.pixels[di + 3] = 255;
+
+      const rSm = wSum > 0 ? (rSum / wSum) : r0;
+      const gSm = wSum > 0 ? (gSum / wSum) : g0;
+      const bSm = wSum > 0 ? (bSum / wSum) : b0;
+
+      const k = Math.min(1, baseStrength * (0.8 + Math.min(vlen, 12) / 18));
+      const di = idx(x, y);
+      pixels[di]     = r0 + (rSm - r0) * k;
+      pixels[di + 1] = g0 + (gSm - g0) * k;
+      pixels[di + 2] = b0 + (bSm - b0) * k;
+      pixels[di + 3] = 255;
     }
   }
-  out.updatePixels();
-  image(out, x0, y0);
+  updatePixels();
 }
 
 function mouseDragged() {
   const { panel } = __computeUI();
+
   if (__blurActive && !__hitRect(mouseX, mouseY, panel)) {
     const r = Math.max(3, Math.floor(penSize / 2));
     __smudgeDirectional(mouseX, mouseY, r, 0.65);
@@ -232,6 +250,11 @@ function mouseDragged() {
 
 function mousePressed() {
   const { panel, pods, dropperBtn, blurBtn, triLeftBBox, triRightBBox, endBtn } = __computeUI();
+  if (typeof endScreenMousePressed === "function" && typeof END !== "undefined" && END && END.visible) {
+    endScreenMousePressed();
+    return;
+  }
+
   if (__hitRect(mouseX, mouseY, dropperBtn)) {
     __blurActive = false;
     __dropperActive = true;
@@ -246,6 +269,10 @@ function mousePressed() {
   }
   if (__hitRect(mouseX, mouseY, endBtn)) {
     __endScreen = true;
+
+    if (typeof showEndScreen === "function") {
+      showEndScreen(__scorePlaceholder);
+    }
     return;
   }
 
@@ -257,7 +284,6 @@ function mousePressed() {
   }
   
   if (__blurActive && !__hitRect(mouseX, mouseY, panel)) {
-    // TODO: Blur code - Jeffrey
     const r = Math.max(3, Math.floor(penSize / 2));
     __smudgeDirectional(mouseX, mouseY, r, 0.65);
     return;
