@@ -158,8 +158,71 @@ function draw() {
   }
 }
 
+function __smudgeDirectional(cx, cy, radius, baseStrength = 0.6) {
+  let vx = mouseX - pmouseX, vy = mouseY - pmouseY;
+  const vlen = Math.sqrt(vx*vx + vy*vy) || 1;
+  vx /= vlen; vy /= vlen;
+
+  const pull = Math.max(3, Math.floor(radius * (0.6 + Math.min(vlen, 12) / 24))); // 0.6r ~ 1.1r
+
+  const x0 = Math.round(cx - radius);
+  const y0 = Math.round(cy - radius);
+  const w  = radius * 2;
+  const h  = radius * 2;
+
+  const src = get(x0, y0, w, h);
+  const out = createImage(w, h);
+  src.loadPixels();
+  out.loadPixels();
+
+  const idx = (x, y) => 4 * (y * w + x);
+  const tau = pull * 0.6;
+
+  for (let yy = 0; yy < h; yy++) {
+    for (let xx = 0; xx < w; xx++) {
+      const dx = xx - radius, dy = yy - radius;
+      const di = idx(xx, yy);
+
+      if (dx*dx + dy*dy > radius*radius) {
+        out.pixels[di]     = src.pixels[di];
+        out.pixels[di + 1] = src.pixels[di + 1];
+        out.pixels[di + 2] = src.pixels[di + 2];
+        out.pixels[di + 3] = src.pixels[di + 3];
+        continue;
+      }
+      let rSum=0,gSum=0,bSum=0, wSum=0;
+      for (let s = 0; s <= pull; s++) {
+        const sx = Math.round(xx - vx * s);
+        const sy = Math.round(yy - vy * s);
+        if (sx < 0 || sy < 0 || sx >= w || sy >= h) continue;
+        const si = idx(sx, sy);
+        const wgt = Math.exp(-s / Math.max(1, tau));
+        rSum += src.pixels[si]     * wgt;
+        gSum += src.pixels[si + 1] * wgt;
+        bSum += src.pixels[si + 2] * wgt;
+        wSum += wgt;
+      }
+      const rSm = rSum / wSum, gSm = gSum / wSum, bSm = bSum / wSum;
+      const r0 = src.pixels[di], g0 = src.pixels[di + 1], b0 = src.pixels[di + 2];
+      const k = baseStrength * Math.min(1, 0.35 + vlen / 12);
+      out.pixels[di]     = r0 + (rSm - r0) * k;
+      out.pixels[di + 1] = g0 + (gSm - g0) * k;
+      out.pixels[di + 2] = b0 + (bSm - b0) * k;
+      out.pixels[di + 3] = 255;
+    }
+  }
+  out.updatePixels();
+  image(out, x0, y0);
+}
+
 function mouseDragged() {
   const { panel } = __computeUI();
+  if (__blurActive && !__hitRect(mouseX, mouseY, panel)) {
+    const r = Math.max(3, Math.floor(penSize / 2));
+    __smudgeDirectional(mouseX, mouseY, r, 0.65);
+    return;
+  }
+
   if (!__hitRect(mouseX, mouseY, panel)) {
     noStroke();
     fill(penColor);
@@ -195,8 +258,8 @@ function mousePressed() {
   
   if (__blurActive && !__hitRect(mouseX, mouseY, panel)) {
     // TODO: Blur code - Jeffrey
-    const c = get(mouseX - 10, mouseY - 10, 20, 20);
-    //penColor = color(c[0], c[1], c[2], c[3]);
+    const r = Math.max(3, Math.floor(penSize / 2));
+    __smudgeDirectional(mouseX, mouseY, r, 0.65);
     return;
   }
   
