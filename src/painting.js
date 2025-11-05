@@ -4,11 +4,12 @@ let win = false;
 function preload() {
   bg = loadImage('/assets/EcceHomoFlaking.jpg');
   dropper = loadImage('/assets/Dropper.jpg');
+  blur = loadImage('/assets/Blur.jpg');
 }
 
 function setup() {
   // Pen variables
-  penSize = 25; // 5; <=20; +=5
+  penSize = 30; // 5; <=50; +=5
   penColor = "red";
   
   createCanvas(480, 480);
@@ -22,8 +23,9 @@ function setup() {
 function draw() {
   if (!win) {
     drawPalette();
+    textSize(256);
+    text("Repair the Painting", 120, 120);
   }
-  // Else, show end + score
 }
 
 function mouseDragged() {
@@ -41,7 +43,7 @@ function drawPalette() {
   fill("white");
   paletteX = 0;
   paletteY = 10;
-  rect(paletteX, paletteY, 75, 400);
+  rect(paletteX, paletteY, 75, 460);
   
   // Draws color pods
   paletteX = 28;
@@ -68,9 +70,16 @@ function drawPalette() {
   fill(penColor);
   ellipse(paletteX, paletteY, 60, 40);
   
+  // Draws blur button
+  paletteX -= 30;
+  paletteY += 30;
+  fill("white")
+  rect(paletteX, paletteY, 60, 21)
+  image(blur, paletteX+22, paletteY+1, 18, 18)
+  
   // Draws size buttons
   fill("black");
-  paletteX -= 10;
+  paletteX += 20;
   paletteY += 35;
   triangle(paletteX, paletteY, paletteX, paletteY+20, paletteX-20, paletteY+10);
   paletteX += 20;
@@ -78,11 +87,24 @@ function drawPalette() {
   
   // Draw pen size example
   paletteX -= 10;
-  paletteY += 40;
+  paletteY += 45;
   circle(paletteX, paletteY, penSize)
+  
+  // Draws finish button
+  paletteX -= 35;
+  paletteY += 30;
+  fill("white")
+  rect(paletteX, paletteY, 70, 21)
+  fill("black")
+  textSize(18)
+  textFont("Constantia")
+  text("Done?", paletteX+10, paletteY+3, 70, 21)
 }
 
 let __dropperActive = false;
+let __blurActive = false;
+let __endActive = false;
+let __endScreen = false;
 
 function __computeUI() {
   const panel = { x: 0, y: 10, w: 75, h: 400 };
@@ -95,12 +117,14 @@ function __computeUI() {
     cy += 30;
   }
   const dropperBtn = { x: cx - 20, y: cy - 10, w: 60, h: 20 };
-  const px = dropperBtn.x + 30;
-  const py = dropperBtn.y + 45;
-  const triLeftBBox  = { x: px - 20, y: py + 35, w: 20, h: 20 };
-  const triRightBBox = { x: px + 10, y: py + 35, w: 20, h: 20 }; 
+  const px = dropperBtn.x;
+  const py = dropperBtn.y + 75;
+  const blurBtn = { x: px, y: py, w: 60, h: 20 };
+  const triLeftBBox  = { x: px, y: py + 35, w: 20, h: 20 };
+  const triRightBBox = { x: px + 40, y: py + 35, w: 20, h: 20 }; 
+  const endBtn = { x: px - 5, y: py + 110, w: 70, h: 20 };
 
-  return { panel, pods, dropperBtn, triLeftBBox, triRightBBox };
+  return { panel, pods, dropperBtn, blurBtn, triLeftBBox, triRightBBox, endBtn };
 }
 
 function __hitRect(mx, my, r) {
@@ -120,6 +144,18 @@ function draw() {
     rect(dropperBtn.x - 2, dropperBtn.y - 2, dropperBtn.w + 4, dropperBtn.h + 4);
     strokeWeight(1);
   }
+  if (__blurActive) {
+    const { blurBtn } = __computeUI();
+    noFill(); stroke(0); strokeWeight(2);
+    rect(blurBtn.x - 2, blurBtn.y - 2, blurBtn.w + 4, blurBtn.h + 4);
+    strokeWeight(1);
+  }
+  if (__endActive) {
+    const { endBtn } = __computeUI();
+    noFill(); stroke(0); strokeWeight(2);
+    rect(endBtn.x - 2, endBtn.y - 2, endBtn.w + 4, endBtn.h + 4);
+    strokeWeight(1);
+  }
 }
 
 function mouseDragged() {
@@ -132,9 +168,21 @@ function mouseDragged() {
 }
 
 function mousePressed() {
-  const { panel, pods, dropperBtn, triLeftBBox, triRightBBox } = __computeUI();
+  const { panel, pods, dropperBtn, blurBtn, triLeftBBox, triRightBBox, endBtn } = __computeUI();
   if (__hitRect(mouseX, mouseY, dropperBtn)) {
+    __blurActive = false;
     __dropperActive = true;
+    return;
+  }
+  if (__hitRect(mouseX, mouseY, blurBtn)) {
+    if (__blurActive == false) {
+      __dropperActive = false;
+    }
+    __blurActive = !__blurActive;
+    return;
+  }
+  if (__hitRect(mouseX, mouseY, endBtn)) {
+    __endScreen = true;
     return;
   }
 
@@ -142,6 +190,20 @@ function mousePressed() {
     const c = get(mouseX, mouseY);
     penColor = color(c[0], c[1], c[2], c[3]);
     __dropperActive = false;
+    return;
+  }
+  
+  if (__blurActive && !__hitRect(mouseX, mouseY, panel)) {
+    // TODO: Blur code - Jeffrey
+    const c = get(mouseX - 10, mouseY - 10, 20, 20);
+    //penColor = color(c[0], c[1], c[2], c[3]);
+    return;
+  }
+  
+  if (__endScreen && !__hitRect(mouseX, mouseY, panel)) {
+    // TODO: End Screen code - Jeffrey
+    // Grading - Jason
+    // Different pictures - Jason
     return;
   }
 
@@ -157,7 +219,18 @@ function mousePressed() {
     return;
   }
   if (__hitRect(mouseX, mouseY, triRightBBox)) {
-    penSize = min(100, penSize + 5);
+    penSize = min(50, penSize + 5);
+    return;
+  }
+}
+
+function mouseMoved() {
+  const { panel, pods, dropperBtn, blurBtn, triLeftBBox, triRightBBox, endBtn } = __computeUI();
+  if (__hitRect(mouseX, mouseY, endBtn)) {
+    __endActive = true;
+  }
+  else {
+    __endActive = false;
     return;
   }
 }
