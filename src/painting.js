@@ -2,9 +2,9 @@ let penColors = ["white", "red", "orange", "yellow", "green", "blue", "purple", 
 let win = false;
 
 function preload() {
-  bg = loadImage('/assets/EcceHomoFlaking.jpg');
-  dropper = loadImage('/assets/Dropper.jpg');
-  blur = loadImage('/assets/Blur.jpg');
+  bg = loadImage('assets/EcceHomoFlaking.jpg');
+  dropper = loadImage('assets/Dropper.jpg');
+  blur = loadImage('assets/Blur.jpg');
 }
 
 function setup() {
