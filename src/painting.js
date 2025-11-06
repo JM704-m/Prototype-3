@@ -28,7 +28,7 @@ function setup() {
   // Pen variables
   penSize = 30; // 5; <=50; +=5
   penColor = "red";
-  createCanvas(780, 780);
+  createCanvas(780, 720);
   drawingContext.imageSmoothingEnabled = true;
   drawingContext.imageSmoothingQuality = 'high';
 
@@ -47,7 +47,7 @@ function setup() {
   fill("white")
   stroke("black")
   textSize(32);
-  text("Repair the Painting!", bg.width/5, 55);
+  text("Repair the Painting!", 300, 60);
   baseScore = __gradeCalc()
 
 }
@@ -113,7 +113,7 @@ function drawPalette() {
   fill("black")
   textSize(18)
   textFont("Constantia")
-  text("Done?", paletteX+10, paletteY+3, 70, 21)
+  text("Done?", 10, paletteY+3, 70, 21)
 }
 
 let __dropperActive = false;
@@ -383,6 +383,5 @@ function __gradeCalc() {
   }
   avgScore = avgScore / pixels.length;
   updatePixels();
-  print(avgScore + "Raw")
   return(avgScore);
 }
