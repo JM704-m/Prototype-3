@@ -1,12 +1,24 @@
+let paintings = []
+let offset = [10, 10, 100, 100]
 let penColors = ["white", "red", "orange", "yellow", "green", "blue", "purple", "black"]
-let win = false;
+let level = -1
 let baseScore = 0
 
 let __prevX = null, __prevY = null;
 
 function preload() {
-  bg = loadImage('assets/EcceHomoFlaking.jpg');
-  endResult = loadImage('/assets/EcceHomoFinal.png');
+  ecce = loadImage('assets/EcceHomoFlaking.jpg');
+  paintings.push(ecce);
+  ecceEnd = loadImage('/assets/EcceHomoFinal.png');
+  paintings.push(ecceEnd);
+  bird = loadImage('assets/PurpleGrackleFlaking.png');
+  paintings.push(bird);
+  birdEnd = loadImage('assets/PurpleGrackleFinal.jpg'); 
+  paintings.push(birdEnd);
+  tempt = loadImage('assets/ChristTemptedFlaking.png'); 
+  paintings.push(tempt);
+  temptEnd = loadImage('assets/ChristTemptedFinal.jpg');
+  paintings.push(temptEnd);
   dropper = loadImage('assets/Dropper.jpg');
   blur = loadImage('assets/Blur.jpg');
 }
@@ -20,6 +32,11 @@ function setup() {
   drawingContext.imageSmoothingEnabled = true;
   drawingContext.imageSmoothingQuality = 'high';
 
+  level++;
+  bg = paintings[level % 6]
+  level++;
+  endResult = paintings[level % 6]
+  
   image(endResult,10,0,480,480);
   solution = [];
   loadPixels();
@@ -29,7 +46,7 @@ function setup() {
   fill("white")
   stroke("black")
   textSize(32);
-  text("Repair the Painting!", 100, 55);
+  text("Repair the Painting!", bg.width/5, 55);
   baseScore = __gradeCalc()
 }
 
@@ -277,6 +294,7 @@ function mousePressed() {
   const { panel, pods, dropperBtn, blurBtn, triLeftBBox, triRightBBox, endBtn } = __computeUI();
   if (typeof END !== "undefined" && END && END.visible && typeof endScreenMousePressed === "function") {
     endScreenMousePressed();
+    setup();
     return;
   }
 
@@ -362,5 +380,6 @@ function __gradeCalc() {
     avgScore += distance;
   }
   avgScore = avgScore / pixels.length;
+  updatePixels();
   return(avgScore);
 }
