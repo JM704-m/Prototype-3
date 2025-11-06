@@ -1,12 +1,12 @@
 let penColors = ["white", "red", "orange", "yellow", "green", "blue", "purple", "black"]
 let win = false;
-
-let __scorePlaceholder = 0;
+let baseScore = 0
 
 let __prevX = null, __prevY = null;
 
 function preload() {
   bg = loadImage('assets/EcceHomoFlaking.jpg');
+  endResult = loadImage('/assets/EcceHomoFinal.png');
   dropper = loadImage('assets/Dropper.jpg');
   blur = loadImage('assets/Blur.jpg');
 }
@@ -19,11 +19,18 @@ function setup() {
   createCanvas(480, 480);
   drawingContext.imageSmoothingEnabled = true;
   drawingContext.imageSmoothingQuality = 'high';
+
+  image(endResult,10,0,480,480);
+  solution = [];
+  loadPixels();
+  solution = pixels;
+  updatePixels();
   image(bg,10,0,480,480);
   fill("white")
   stroke("black")
   textSize(32);
   text("Repair the Painting!", 100, 55);
+  baseScore = __gradeCalc()
 }
 
 function drawPalette() {
@@ -96,7 +103,7 @@ let __endActive = false;
 let __endScreen = false;
 
 function __computeUI() {
-  const panel = { x: 0, y: 10, w: 75, h: 400 };
+  const panel = { x: 0, y: 10, w: 75, h: 460 };
   let cx = 28, cy = 30, off = 20;
   const pods = [];
   for (let i = 0; i < penColors.length; i++) {
@@ -288,7 +295,8 @@ function mousePressed() {
   if (__hitRect(mouseX, mouseY, endBtn)) {
     __endScreen = true;
     if (typeof showEndScreen === "function") {
-      showEndScreen(__scorePlaceholder);
+      avgScore = max(0, 1 - (__gradeCalc()/(baseScore * 2))).toFixed(2);
+      showEndScreen(round(avgScore * 100));
     }
     return;
   }
@@ -339,4 +347,20 @@ function mouseMoved() {
     __endActive = false;
     return;
   }
+}
+
+function __gradeCalc() {
+  avgScore = 0;
+  loadPixels();
+  for (let i = 0; i < pixels.length; i += 4) {
+    deltaR = sq(solution[i] - pixels[i]);
+    deltaB = sq(solution[i+1] - pixels[i+1]);
+    deltaG = sq(solution[i+3] - pixels[i+3]);
+    redMean = (solution[i] + pixels[i]) / 2;
+
+    distance = sqrt(((2 + (redMean/256)) * sq(deltaR)) + (4 * sq(deltaG)) + ((2 + ((255 - redMean) / 256)) * sq(deltaB)));
+    avgScore += distance;
+  }
+  avgScore = avgScore / pixels.length;
+  return(avgScore);
 }
