@@ -28,7 +28,7 @@ function setup() {
   // Pen variables
   penSize = 30; // 5; <=50; +=5
   penColor = "red";
-  createCanvas(480, 480);
+  createCanvas(780, 780);
   drawingContext.imageSmoothingEnabled = true;
   drawingContext.imageSmoothingQuality = 'high';
 
@@ -37,17 +37,19 @@ function setup() {
   level++;
   endResult = paintings[level % 6]
   
-  image(endResult,10,0,480,480);
+  image(endResult,60,0,720,720);
+  drawPalette()
   solution = [];
   loadPixels();
   solution = pixels;
   updatePixels();
-  image(bg,10,0,480,480);
+  image(bg,60,0,720,720);
   fill("white")
   stroke("black")
   textSize(32);
   text("Repair the Painting!", bg.width/5, 55);
   baseScore = __gradeCalc()
+
 }
 
 function drawPalette() {
@@ -381,5 +383,6 @@ function __gradeCalc() {
   }
   avgScore = avgScore / pixels.length;
   updatePixels();
+  print(avgScore + "Raw")
   return(avgScore);
 }
