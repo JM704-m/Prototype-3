@@ -224,7 +224,12 @@ function __smudgeDirectional(cx, cy, radius, baseStrength = 0.65) {
       pixels[di + 3] = 255;
     }
   }
+<<<<<<< HEAD
   updatePixels();
+=======
+  out.updatePixels();
+  copy(out, 0, 0, out.width, out.height, x0, y0, out.width, out.height);
+>>>>>>> f36aee3e4286b6f6753414cc86150b59482e553a
 }
 
 function mouseDragged() {
