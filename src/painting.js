@@ -10,11 +10,14 @@ function preload() {
 }
 
 function setup() {
+  pixelDensity(1);
   // Pen variables
   penSize = 30; // 5; <=50; +=5
   penColor = "red";
   
   createCanvas(480, 480);
+  drawingContext.imageSmoothingEnabled = true;
+  drawingContext.imageSmoothingQuality = 'high';
   image(bg,10,0,480,480);
   fill("white")
   stroke("black")
@@ -236,7 +239,7 @@ function __smudgeDirectional(cx, cy, radius, baseStrength = 0.65) {
     }
   }
   out.updatePixels();
-  image(out, x0, y0);
+  copy(out, 0, 0, out.width, out.height, x0, y0, out.width, out.height);
 }
 
 function mouseDragged() {
