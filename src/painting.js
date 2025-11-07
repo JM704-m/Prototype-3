@@ -1,3 +1,4 @@
+let classical
 let paintings = []
 let offset = [10, 10, 100, 100]
 let penColors = ["white", "red", "orange", "yellow", "green", "blue", "purple", "black"]
@@ -7,6 +8,8 @@ let baseScore = 0
 let __prevX = null, __prevY = null;
 
 function preload() {
+  soundFormats('mp3', 'ogg');
+  classical = loadSound('/assets/Winter II. Largo.mp3');
   ecce = loadImage('assets/EcceHomoFlaking.jpg');
   paintings.push(ecce);
   ecceEnd = loadImage('/assets/EcceHomoFinal.png');
@@ -49,7 +52,6 @@ function setup() {
   textSize(32);
   text("Repair the Painting!", 300, 60);
   baseScore = __gradeCalc()
-
 }
 
 function drawPalette() {
@@ -292,6 +294,10 @@ function mouseReleased() {
 function mousePressed() {
   __prevX = mouseX;
   __prevY = mouseY;
+  if (classical.isPlaying() == false){
+    classical.play();
+  }
+  
 
   const { panel, pods, dropperBtn, blurBtn, triLeftBBox, triRightBBox, endBtn } = __computeUI();
   if (typeof END !== "undefined" && END && END.visible && typeof endScreenMousePressed === "function") {
